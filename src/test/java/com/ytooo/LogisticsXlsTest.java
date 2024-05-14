@@ -1,6 +1,9 @@
 package com.ytooo;
 
 import com.ytooo.bean.OrderInfo;
+import lombok.SneakyThrows;
+import org.drools.decisiontable.InputType;
+import org.drools.decisiontable.SpreadsheetCompiler;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.kie.api.KieBase;
@@ -9,16 +12,36 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.Arrays;
 
 @SpringBootTest
 @RunWith(SpringRunner.class)
-public class LogisticsTest {
+public class LogisticsXlsTest {
     @Autowired
     private KieSession session;
 
     @Autowired
     private KieBase kieBase;
+
+    @SneakyThrows
+    @Test
+    public void compiler(){
+        String drl = "";
+        String filePath="/abc.xls";
+        File file = new File(filePath);
+        InputStream is = Files.newInputStream(file.toPath());
+        SpreadsheetCompiler compiler = new SpreadsheetCompiler();
+//        String fileType = "xls";
+        String fileType = filePath.substring(filePath.lastIndexOf("."));
+        if ("xls".equals(fileType)) {
+            drl = compiler.compile(is, InputType.XLS);
+        }
+
+    }
 
     @Test
     public void test() {
