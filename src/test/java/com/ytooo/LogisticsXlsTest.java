@@ -7,7 +7,9 @@ import org.drools.decisiontable.SpreadsheetCompiler;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.kie.api.KieBase;
+import org.kie.api.io.ResourceType;
 import org.kie.api.runtime.KieSession;
+import org.kie.internal.utils.KieHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -30,17 +32,32 @@ public class LogisticsXlsTest {
     @SneakyThrows
     @Test
     public void compiler(){
-        String drl = "";
-        String filePath="/abc.xls";
+        String drl;
+        String filePath="/Users/espandy/IdeaProjects/cnrmall-drools/src/main/resources/xls/dispatch.xls";
         File file = new File(filePath);
         InputStream is = Files.newInputStream(file.toPath());
         SpreadsheetCompiler compiler = new SpreadsheetCompiler();
 //        String fileType = "xls";
-        String fileType = filePath.substring(filePath.lastIndexOf("."));
-        if ("xls".equals(fileType)) {
-            drl = compiler.compile(is, InputType.XLS);
-        }
+//        String fileType = filePath.substring(filePath.lastIndexOf("."));
+//        if ("xls".equals(fileType)) {
+        drl = compiler.compile(is, InputType.XLS);
+//        }
+        System.out.println(drl);
 
+        KieHelper kieHelper = new KieHelper();
+        kieHelper.addContent(drl, ResourceType.DRL);
+        session = kieHelper.build().newKieSession();
+
+
+        OrderInfo orderInfo2 = new OrderInfo();
+        orderInfo2.setCategoryName("烟");
+        orderInfo2.setWeight(2.00);
+        orderInfo2.setPrice(100);
+
+        session.insert(orderInfo2);
+        session.fireAllRules();
+
+        System.out.println(orderInfo2);
     }
 
     @Test

@@ -13,8 +13,7 @@ end
 rule "dispatch2"
     salience 50
     when
-      $order: OrderInfo(weight < 3, (price > 0 && price < 300)
-            )
+      $order: OrderInfo(weight < 3, (price > 0 && price < 500))
     then
         $order.getLogistics().add("圆通");
         $order.getLogistics().add("中通");
@@ -22,8 +21,7 @@ end
 rule "dispatch3"
     salience 20
     when
-        $order: OrderInfo(weight < 3, (price > 0 && price < 1000)
-            )
+        $order: OrderInfo(weight < 3, (price > 500 && price < 1000))
     then
         $order.getLogistics().add("顺丰");
         $order.getLogistics().add("京东");
