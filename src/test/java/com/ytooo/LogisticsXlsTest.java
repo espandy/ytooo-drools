@@ -33,7 +33,8 @@ public class LogisticsXlsTest {
     @Test
     public void compiler(){
         String drl;
-        String filePath="/Users/espandy/IdeaProjects/cnrmall-drools/src/main/resources/xls/dispatch.xls";
+        //String filePath="/Users/espandy/IdeaProjects/cnrmall-drools/src/main/resources/xls/dispatch.xls";
+        String filePath="D:\\ProjectCode\\ytooo-drools\\src\\main\\resources\\xls\\dispatch.xls";
         File file = new File(filePath);
         InputStream is = Files.newInputStream(file.toPath());
         SpreadsheetCompiler compiler = new SpreadsheetCompiler();
@@ -50,14 +51,14 @@ public class LogisticsXlsTest {
 
 
         OrderInfo orderInfo2 = new OrderInfo();
-        orderInfo2.setCategoryName("烟");
+        orderInfo2.setCategoryName("酒");
         orderInfo2.setWeight(2.00);
-        orderInfo2.setPrice(100);
+        orderInfo2.setPrice(800);
 
         session.insert(orderInfo2);
         session.fireAllRules();
 
-        System.out.println(orderInfo2);
+        System.out.println(orderInfo2.getLogistics());
     }
 
     @Test
