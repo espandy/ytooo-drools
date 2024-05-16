@@ -1,0 +1,211 @@
+@startuml
+'https://plantuml.com/class-diagram
+api ..> LogisticsManager
+
+LogisticsManager ..> TMSAgent
+
+LogisticsManager ..> TMSAgentEnum
+
+LogisticsManager "1" *-r- "many" LogisticTracksDaemon:包含
+
+class api {
+    -LogisticsManager logisticsManager;
+    +receiveJDTrace();
+    +receiveSFTrace();
+}
+note top of api: 接收各公司的推送
+
+note left of api::logisticsManager
+ 快递管理类用于获取TMSAgent和相关业务处理
+end note
+
+note right of api::"receiveJDTrace()"
+  接收京东快递轨迹,格式"jdRequest"由京东制定
+  调用logisticsManager.receiverTrace(TMSAgentEnum_JD, jdRequest);
+end note
+
+note right of api::"receiveSFTrace()"
+ 接收顺丰快递轨迹,格式信息等"sfRequest"由顺丰制定，
+ 调用logisticsManager.receiverTrace(TMSAgentEnum_SF, sfRequest);
+end note
+
+
+
+
+class LogisticTracksDaemon{
+        -String appKey;
+        -String appSecret;
+        -String appName;
+        -String appUrl;
+        -SCMOrderManager scmOrderManager;
+        -LogisticsManager logisticsManager;
+        -LogisticsRepository repository;
+        -registerReceiveTracks();
+        +unRegisterReceiveTracks();
+        +procTracksInfo(TrackInfo info);
+}
+note top of LogisticTracksDaemon:  接收轨迹信息守护线程类
+
+note right of LogisticTracksDaemon::appKey
+用于registerReceiveTracks()，unRegisterReceiveTracks()
+包括下面appSecret appName appUrl，都用于
+end note
+
+note right of LogisticTracksDaemon::scmOrderManager
+    SCM订单管理类，可以获取scmOrder对象
+end note
+
+note right of LogisticTracksDaemon::repository
+     数据仓储类
+end note
+
+
+note right of LogisticTracksDaemon::"registerReceiveTracks()"
+随着程序启动，
+调用logisticsManager.registerReceiveTracks(appKey, appSecret, appName, appUrl);
+end note
+
+note right of LogisticTracksDaemon::"procTracksInfo(TrackInfo info)"
+接收订阅的推送轨迹信息
+调用repository持久化，并查询出此运单全量轨迹信息
+订单管理类scmOrderManager得到对应SCMOrder
+更新SCMOrder全量轨迹信息
+end note
+
+
+Enum TMSAgentEnum{
+    TMSAgentEnum_JD("JD"),
+    TMSAgentEnum_SF("SF"),
+}
+
+class LogisticsManager{
+    -Map<String, String> registerMap;
+    -void pushLogisticTracks(taskInfo)
+    -Map<String, String> flushRegisterMap();
+    +TaskInfo receiverTrace(TMSAgentEnum t, T<?> t)
+    +List<TaskInfo> queryTracksByCode(String expressCode);
+    +String registerReceiveTracks(String appKey, String appSec, String id, String url);
+    +void unRegisterReceiveTracks(String appKey, String appSec, String id, String url);
+    +TMSAgent getTMSAgent(TMSAgentEnum e);
+    +String requireExpressCode(String ... param);
+}
+
+
+note left of LogisticsManager::registerMap
+ 已经注册接收的集合key为注册id, value为服务接收地址
+end note
+
+
+
+note left of LogisticsManager::"pushLogisticTracks(taskInfo)"
+  1通过运单获取到对应app
+  2通过app到注册列表 registerMap 获取推送地址
+  3推送对应回调地址，并记录推送结果
+  4失败最多重试3次
+
+  说明：推送最多重试3次，3次失败等待定时查询运单较轨迹变化，推送全量
+end note
+
+
+note left of LogisticsManager::"Map<String, String> flushRegisterMap()"
+ 有系统订阅或取消订阅时刷新 registerMap
+end note
+
+
+note left of LogisticsManager::"TaskInfo receiverTrace(TMSAgentEnum t, T<?> t)"
+  1通过枚举，调用getTMSAgent(TMSAgentEnum e),获取TMSAgent实例
+  2调用对应tmsAgent.receiverTrace(t),得到TackInfo,并持久化
+  3调用pushLogisticTracks(taskInfo)
+end note
+
+note left of LogisticsManager::"List<TaskInfo> queryTracksByCode(String expressCode)"
+  1通过枚举，调用getTMSAgent(TMSAgentEnum e),获取TMSAgent实例
+  2调用对应tmsAgent.receiverTrace(t),得到TackInfo,并持久化
+  3调用pushLogisticTracks(taskInfo)
+end note
+
+
+
+
+note left of LogisticsManager::"registerReceiveTracks(String appKey, String appSec, String id, String url)"
+  1将注册信息记录持久化，并维护 registerMap
+  2调用对应tmsAgent.receiverTrace(t),得到TackInfo
+  3调用pushLogisticTracks(taskInfo)
+end note
+
+note left of LogisticsManager::"unRegisterReceiveTracks(String appKey, String appSec, String id, String url)"
+  1取消订阅，记录持久化，并维护 registerMap
+end note
+
+note left of LogisticsManager::"TMSAgent getTMSAgent(TMSAgentEnum e)"
+  1取消订阅，记录持久化，并维护 registerMap
+end note
+
+note left of LogisticsManager::"String requireExpressCode(String ... param)"
+  1
+end note
+
+
+
+class TMSAgentJD extends TMSAgent
+class TMSAgentSF extends TMSAgent
+
+Abstract class TMSAgent{
+    #String id;
+    +{Abstract} String getId();
+    +{Abstract} String requireExpressCode(<T> t);
+    +{Abstract} List<?> queryTracks(String expressCode);
+    +{Abstract} receiverTracks(String info);
+    +{Abstract} subscribeTrace(String expressCode);
+    +{Abstract} cancelExpressCode(String expressCode);
+}
+note top of TMSAgent
+快递公司代理的抽象表示，
+它负责与不同的物流公司进行通信，
+并处理与物流相关的业务。
+end note
+
+note left of TMSAgent::"String getId()"
+获取当前快递代理类ID抽象方法
+end note
+
+note left of TMSAgent::"String requireExpressCode(<T> t)"
+获取运单号抽象方法
+end note
+
+note left of TMSAgent::"receiverTracks(String info)"
+处理推送运单轨迹抽象方法
+end note
+
+note left of TMSAgent::"subscribeTrace(String expressCode)"
+订阅运单轨迹抽象方法
+end note
+
+note left of TMSAgent::"cancelExpressCode(String expressCode)"
+取消运单号抽象方法
+end note
+
+class TMSAgentJD{
+    +String getId();
+    +requireExpressCode(JDRequest jdReq);
+    +queryExpressCode(String expressCode);
+    +receiverTracks(String info, );
+    +subscribeTrace(String expressCode);
+}
+class TMSAgentSF{
+    +String getId();
+    requireExpressCode(JDRequest jdReq);
+    queryExpressCode(String expressCode);
+    receiverTracks(String info, );
+    subscribeTrace(String expressCode);
+}
+
+note as N1
+    处理快递系统主动推送的轨迹信息
+    LogisticTracksDaemon 在服务每次启动时，需要向注册 LogisticsManager 注册
+    由 LogisticsManager 统一管理维护订阅（取消订阅）的客户端
+
+
+end note
+
+@enduml
